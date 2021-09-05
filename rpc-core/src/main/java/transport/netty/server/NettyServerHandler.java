@@ -46,7 +46,11 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<RpcRequest> 
 
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcRequest rpcRequest) throws Exception {
-
+        if(rpcRequest.isHeartBeat()){
+            logger.info("收到客户端心跳包...");
+            return;
+        }
+        logger.info("服务器收到请求");
     }
 
 }
