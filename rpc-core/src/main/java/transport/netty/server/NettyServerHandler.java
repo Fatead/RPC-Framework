@@ -1,6 +1,9 @@
 package transport.netty.server;
 
 import entity.RpcRequest;
+import entity.RpcResponse;
+import factory.SingletonFactory;
+import handler.RequestHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleState;
@@ -11,6 +14,11 @@ import org.slf4j.LoggerFactory;
 public class NettyServerHandler extends SimpleChannelInboundHandler<RpcRequest> {
 
     private static final Logger logger = LoggerFactory.getLogger(NettyServerHandler.class);
+    private final RequestHandler requestHandler;
+
+    public NettyServerHandler(){
+        this.requestHandler = SingletonFactory.getInstance(RequestHandler.class);
+    }
 
     /**
      * Netty应用心跳和重连的过程：
@@ -51,6 +59,12 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<RpcRequest> 
             return;
         }
         logger.info("服务器收到请求");
+        Object result = requestHandler.handle(rpcRequest);
+        if(channelHandlerContext.channel().isActive() && channelHandlerContext.channel().isWritable()){
+            channelHandlerContext.writeAndFlush(RpcResponse.success(result, rpcRequest.getRequestId()));
+        }else {
+            logger.info("通道不可写");
+        }
     }
 
 }
