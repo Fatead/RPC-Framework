@@ -7,13 +7,14 @@ import exception.RpcException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import provider.ServiceProvider;
+import registry.ServiceRegistry;
 import util.ReflectUtil;
 
-import javax.imageio.spi.ServiceRegistry;
+import java.net.InetSocketAddress;
 import java.sql.Ref;
 import java.util.Set;
 
-public class AbstractRpcServer implements RpcServer{
+public abstract class AbstractRpcServer implements RpcServer{
 
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -45,20 +46,31 @@ public class AbstractRpcServer implements RpcServer{
         for (Class<?> clazz : classes) {
             //当前类有Service注解，需要将其发布
             if(clazz.isAnnotationPresent(Service.class)){
-
+                String serviceName = clazz.getAnnotation(Service.class).name();
+                Object obj;
+                try {
+                    obj = clazz.newInstance();
+                } catch (InstantiationException | IllegalAccessException e) {
+                    logger.error("创建实例时有错误发生");
+                    continue;
+                }
+                if("".equals(serviceName)){
+                    Class<?>[] interfaces = clazz.getInterfaces();
+                    for (Class<?> anInterface : interfaces) {
+                        //getCanonical是获取所传类以Java语言规范定义的格式输出
+                        publishService(obj,anInterface.getCanonicalName());
+                    }
+                }else {
+                    publishService(obj,serviceName);
+                }
             }
         }
-
-    }
-
-    @Override
-    public void start() {
-
     }
 
     @Override
     public <T> void publishService(T service, String serviceName) {
         serviceProvider.addServiceProvider(service, serviceName);
+        serviceRegistry.register(serviceName,new InetSocketAddress(host,port));
     }
 
 }
